@@ -34,6 +34,22 @@ test('accepts only the fixed six-file zero-migration platform MCP profile', () =
   })).status, 'FAIL');
 });
 
+test('accepts only the fixed nine-file zero-migration read-only MCP Gateway profile', () => {
+  assert.equal(validateInputObject(validInput({
+    validationProfile: 'mcp-gateway-readonly',
+    expectedChangedFileCount: '9',
+  })).status, 'PASS');
+  assert.equal(validateInputObject(validInput({
+    validationProfile: 'mcp-gateway-readonly',
+    expectedChangedFileCount: '8',
+  })).status, 'FAIL');
+  assert.equal(validateInputObject(validInput({
+    validationProfile: 'mcp-gateway-readonly',
+    expectedChangedFileCount: '9',
+    expectedMigrationCount: '1',
+  })).status, 'FAIL');
+});
+
 test('rejects refs, short SHAs, uppercase SHAs and unknown profiles', () => {
   assert.equal(validateInputObject(validInput({ privateExactSha: 'main' })).status, 'FAIL');
   assert.equal(validateInputObject(validInput({ privateExactSha: validSha.slice(0, 12) })).status, 'FAIL');
@@ -54,6 +70,7 @@ test('controller keeps the private checkout read-only and public-safe', async ()
   assert.match(workflow, /ref: \$\{\{ inputs\.privateExactSha \}\}/);
   assert.ok((workflow.match(/persist-credentials: false/g) ?? []).length >= 2);
   assert.match(workflow, /fetch-depth: 0/);
+  assert.match(workflow, /run-mcp-gateway-readonly-profile\.mjs/);
   assert.doesNotMatch(workflow, /actions\/upload-artifact/);
   assert.doesNotMatch(workflow, /pull_request_target/);
   assert.doesNotMatch(workflow, /gh\s+pr\s+merge/i);
@@ -66,6 +83,7 @@ test('dispatch exposes only fixed profiles and no arbitrary command input', asyn
   const workflow = await readFile('.github/workflows/pmai-validation-dispatch.yml', 'utf8');
   assert.match(workflow, /canonical-baseline/);
   assert.match(workflow, /platform-mcp-dev/);
+  assert.match(workflow, /mcp-gateway-readonly/);
   assert.doesNotMatch(workflow, /command:/);
   assert.doesNotMatch(workflow, /script:/);
   assert.doesNotMatch(workflow, /shellCommand/);
@@ -94,5 +112,21 @@ test('platform MCP profile is fixed-scope, sealed and Netlify-only', async () =>
   assert.match(runner, /Vercel integration is explicitly deferred/);
   assert.doesNotMatch(runner, /VERCEL_MCP_ENDPOINT_MISSING/);
   assert.match(runner, /FORMAL_PLATFORM_ACTION_EXPOSED/);
+  assert.doesNotMatch(runner, /actions\/upload-artifact/);
+});
+
+test('read-only MCP Gateway profile is fixed-scope, sealed and authority bounded', async () => {
+  const runner = await readFile('scripts/run-mcp-gateway-readonly-profile.mjs', 'utf8');
+  assert.match(runner, /pmai-private-raw/);
+  assert.match(runner, /mode: 0o700/);
+  assert.match(runner, /0o600/);
+  assert.match(runner, /EXACT_MCP_GATEWAY_SCOPE_MISMATCH/);
+  assert.match(runner, /TIMING_SAFE_TOKEN_COMPARE_MISSING/);
+  assert.match(runner, /READ_ONLY_ANNOTATION_MISSING/);
+  assert.match(runner, /FORMAL_APPLICATION_GUARD_MISSING/);
+  assert.match(runner, /PRODUCTION_DEPLOYMENT_GUARD_MISSING/);
+  assert.match(runner, /NETLIFY_ORIGIN_SUPPORT_MISSING/);
+  assert.match(runner, /VERCEL_ACTIVE_SCOPE_PRESENT/);
+  assert.match(runner, /LEGACY_DIAGNOSTIC/);
   assert.doesNotMatch(runner, /actions\/upload-artifact/);
 });
