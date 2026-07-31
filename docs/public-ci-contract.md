@@ -45,6 +45,10 @@ The first fixed profile verifies:
 - Engineering Director target lint
 - production build without deployment
 
+## Public controller self-validation
+
+Every controller change must pass the public repository's own contract tests and syntax checks before it can be considered for merge. This self-validation uses only public controller code and does not require access to the private repository.
+
 ## Public evidence
 
 The job summary exposes only exact SHAs, counts, fixed stage results, sanitized failure categories, and the final verdict. Raw private output is stored in mode-restricted runner-local files and deleted before the job concludes. No artifact is uploaded.
