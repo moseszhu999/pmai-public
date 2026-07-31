@@ -140,6 +140,9 @@ jobs:
             platform-mcp-dev)
               node scripts/run-platform-mcp-dev-profile.mjs
               ;;
+            mcp-gateway-readonly)
+              node scripts/run-mcp-gateway-readonly-profile.mjs
+              ;;
             *)
               echo 'status=FAIL' >> "$GITHUB_OUTPUT"
               echo 'failure_category=VALIDATION_PROFILE_INVALID' >> "$GITHUB_OUTPUT"
@@ -205,6 +208,7 @@ jobs:
           DEPENDENCY_STATUS: ${{ steps.profile.outputs.dependency_status }}
           TEST_STATUS: ${{ steps.profile.outputs.test_status }}
           LINT_STATUS: ${{ steps.profile.outputs.lint_status }}
+          TYPECHECK_STATUS: ${{ steps.profile.outputs.typecheck_status }}
           BUILD_STATUS: ${{ steps.profile.outputs.build_status }}
           FINAL_VERDICT: ${{ steps.finalize.outputs.verdict }}
           FAILURE_STAGE: ${{ steps.finalize.outputs.failure_stage }}
@@ -232,6 +236,7 @@ jobs:
             `- Dependency install: **${value(process.env.DEPENDENCY_STATUS)}**`,
             `- Tests: **${value(process.env.TEST_STATUS)}**`,
             `- Target lint: **${value(process.env.LINT_STATUS)}**`,
+            `- Typecheck: **${value(process.env.TYPECHECK_STATUS)}**`,
             `- Production build: **${value(process.env.BUILD_STATUS)}**`,
             `- Profile failure category: **${value(process.env.PROFILE_FAILURE)}**`,
             `- Failure stage: **${value(process.env.FAILURE_STAGE)}**`,
