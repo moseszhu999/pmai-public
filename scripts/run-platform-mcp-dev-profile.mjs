@@ -16,7 +16,7 @@ const baseSha = process.env.EXPECTED_BASE_SHA ?? '';
 if (!repo || !runnerTemp || !/^[0-9a-f]{40}$/.test(exactSha) || !/^[0-9a-f]{40}$/.test(baseSha)) {
   appendOutput('status', 'FAIL');
   appendOutput('failure_category', 'PROFILE_ENVIRONMENT_INVALID');
-  console.log('PMAI_PLATFORM_MCP_DEV status=FAIL category=PROFILE_ENVIRONMENT_INVALID');
+  console.log('PMAI_NETLIFY_MCP_DEV status=FAIL category=PROFILE_ENVIRONMENT_INVALID');
   process.exit(1);
 }
 
@@ -77,8 +77,11 @@ async function runContractChecks() {
   const docs = await readFile(path.join(repo, 'docs/agent-native/v1/platform-mcp-development-v1.md'), 'utf8');
   const combined = [setup, linker, evidence, test, docs].join('\n');
 
-  if (!setup.includes('https://mcp.vercel.com')) violations.push('VERCEL_MCP_ENDPOINT_MISSING');
   if (!setup.includes('https://netlify-mcp.netlify.app/mcp')) violations.push('NETLIFY_MCP_ENDPOINT_MISSING');
+  if (setup.includes('https://mcp.vercel.com')) violations.push('VERCEL_MCP_ENDPOINT_ACTIVE');
+  if (!setup.includes('Vercel integration is explicitly deferred')) violations.push('VERCEL_DEFERRAL_MISSING');
+  if (!docs.includes('Netlify is the only active deployment and preview platform')) violations.push('NETLIFY_ONLY_SCOPE_MISSING');
+  if (!docs.includes('Vercel integration is explicitly deferred')) violations.push('VERCEL_DOC_DEFERRAL_MISSING');
   if (!linker.includes('151d27a2-80b8-4d6a-be6c-794c08a73f9f')) violations.push('NETLIFY_SITE_BINDING_MISSING');
   if (!ignore.split(/\r?\n/).includes('.netlify/')) violations.push('NETLIFY_STATE_NOT_IGNORED');
   if (!evidence.includes('sourceCommitSha')) violations.push('EXACT_SHA_EVIDENCE_MISSING');
@@ -167,5 +170,5 @@ appendOutput('dependency_status', dependencyStatus);
 appendOutput('test_status', testStatus);
 appendOutput('lint_status', lintStatus);
 appendOutput('build_status', buildStatus);
-console.log(`PMAI_PLATFORM_MCP_DEV status=${overall} category=${failureCategory} contract=${contract.status} dependencies=${dependencyStatus} test=${testStatus} lint=${lintStatus} build=${buildStatus}`);
+console.log(`PMAI_NETLIFY_MCP_DEV status=${overall} category=${failureCategory} contract=${contract.status} dependencies=${dependencyStatus} test=${testStatus} lint=${lintStatus} build=${buildStatus}`);
 process.exitCode = overall === 'PASS' ? 0 : 1;

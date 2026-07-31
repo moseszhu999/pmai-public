@@ -82,15 +82,17 @@ test('private baseline profile seals raw output and scans Agent authority bounda
   assert.match(runner, /FORMAL_EXECUTION_COMMAND/);
 });
 
-test('platform MCP profile is fixed-scope, sealed and preview-only', async () => {
+test('platform MCP profile is fixed-scope, sealed and Netlify-only', async () => {
   const runner = await readFile('scripts/run-platform-mcp-dev-profile.mjs', 'utf8');
   assert.match(runner, /pmai-private-raw/);
   assert.match(runner, /platform-mcp-development-v1\.md/);
   assert.match(runner, /deployment-evidence\.test\.ts/);
   assert.match(runner, /setup-codex-platform-mcp\.sh/);
   assert.match(runner, /link-pmai-netlify-dev\.sh/);
-  assert.match(runner, /https:\/\/mcp\.vercel\.com/);
   assert.match(runner, /https:\/\/netlify-mcp\.netlify\.app\/mcp/);
+  assert.match(runner, /VERCEL_MCP_ENDPOINT_ACTIVE/);
+  assert.match(runner, /Vercel integration is explicitly deferred/);
+  assert.doesNotMatch(runner, /VERCEL_MCP_ENDPOINT_MISSING/);
   assert.match(runner, /FORMAL_PLATFORM_ACTION_EXPOSED/);
   assert.doesNotMatch(runner, /actions\/upload-artifact/);
 });
