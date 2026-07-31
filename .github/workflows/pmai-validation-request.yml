@@ -1,0 +1,56 @@
+name: PMAI validation request carrier
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - validation-requests/current.json
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      status: ${{ steps.request.outputs.status }}
+      requestId: ${{ steps.request.outputs.requestId }}
+      privateExactSha: ${{ steps.request.outputs.privateExactSha }}
+      expectedBaseSha: ${{ steps.request.outputs.expectedBaseSha }}
+      expectedChangedFileCount: ${{ steps.request.outputs.expectedChangedFileCount }}
+      expectedMigrationCount: ${{ steps.request.outputs.expectedMigrationCount }}
+      validationProfile: ${{ steps.request.outputs.validationProfile }}
+    steps:
+      - name: Check out public validation request
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate public controller and request contracts
+        run: |
+          npm test
+          npm run check
+
+      - name: Parse fixed validation request
+        id: request
+        run: node scripts/read-validation-request.mjs
+
+  validate:
+    needs: prepare
+    if: needs.prepare.outputs.status == 'PASS'
+    uses: ./.github/workflows/pmai-exact-head-controller.yml
+    with:
+      privateExactSha: ${{ needs.prepare.outputs.privateExactSha }}
+      expectedBaseSha: ${{ needs.prepare.outputs.expectedBaseSha }}
+      expectedChangedFileCount: ${{ needs.prepare.outputs.expectedChangedFileCount }}
+      expectedMigrationCount: ${{ needs.prepare.outputs.expectedMigrationCount }}
+      validationProfile: ${{ needs.prepare.outputs.validationProfile }}
+    secrets:
+      PMAI_PRIVATE_READ_TOKEN: ${{ secrets.PMAI_PRIVATE_READ_TOKEN }}
