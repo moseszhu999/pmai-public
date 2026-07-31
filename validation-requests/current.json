@@ -1,6 +1,6 @@
 {
-  "requestId": "pmai-pr25-mcp-gateway-readonly-v4",
-  "privateExactSha": "8ff829d43e4e0ea44f30f35b7a61f5f813b49ee2",
+  "requestId": "pmai-pr25-mcp-gateway-readonly-v5",
+  "privateExactSha": "245a5b51ce7fc74fa9955c247e549c9d57b016ec",
   "expectedBaseSha": "4625a8ba8f842cfec5377a6de7fe246a1f2e9602",
   "expectedChangedFileCount": "9",
   "expectedMigrationCount": "0",
