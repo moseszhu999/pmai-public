@@ -1,0 +1,5 @@
+{
+  "activePlatform": "NETLIFY",
+  "deferredPlatforms": ["VERCEL"],
+  "productionActions": "DISABLED"
+}
