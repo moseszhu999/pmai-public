@@ -1,6 +1,6 @@
 {
-  "requestId": "pmai-pr24-platform-mcp-dev-v3",
-  "privateExactSha": "192048cdfe7a12fee82cc3c62df221e9891c5fa8",
+  "requestId": "pmai-pr24-netlify-only-v4",
+  "privateExactSha": "2091b50a4369e79bbbe6eb99eb8980413877181a",
   "expectedBaseSha": "7423edd3525ef2172729db8f0c0150faf8984d5c",
   "expectedChangedFileCount": "6",
   "expectedMigrationCount": "0",
