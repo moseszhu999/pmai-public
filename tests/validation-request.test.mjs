@@ -36,3 +36,22 @@ test('request carrier is main-only, fixed-path and delegates to the reusable con
   assert.doesNotMatch(workflow, /shellCommand/);
   assert.doesNotMatch(workflow, /actions\/upload-artifact/);
 });
+
+test('sanitized evidence is published only to the fixed public ledger', async () => {
+  const requestWorkflow = await readFile('.github/workflows/pmai-validation-request.yml', 'utf8');
+  const controller = await readFile('.github/workflows/pmai-exact-head-controller.yml', 'utf8');
+
+  assert.match(requestWorkflow, /issues: write/);
+  assert.match(requestWorkflow, /issue_number: 5/);
+  assert.match(requestWorkflow, /needs\.validate\.outputs\.verdict/);
+  assert.match(requestWorkflow, /needs\.validate\.outputs\.failureStage/);
+  assert.match(requestWorkflow, /No private source, changed-file names, raw output/);
+  assert.doesNotMatch(requestWorkflow, /PRIVATE_TOKEN/);
+  assert.doesNotMatch(requestWorkflow, /pmai-private-raw/);
+
+  assert.match(controller, /failureStage:/);
+  assert.match(controller, /failure_stage=PRIVATE_READ_CREDENTIAL/);
+  assert.match(controller, /failure_stage=PRIVATE_CHECKOUT/);
+  assert.match(controller, /failure_stage=PRIVATE_SCOPE/);
+  assert.match(controller, /failure_stage=VALIDATION_PROFILE/);
+});

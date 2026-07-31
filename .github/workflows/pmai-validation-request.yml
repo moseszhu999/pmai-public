@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   prepare:
@@ -54,3 +55,42 @@ jobs:
       validationProfile: ${{ needs.prepare.outputs.validationProfile }}
     secrets:
       PMAI_PRIVATE_READ_TOKEN: ${{ secrets.PMAI_PRIVATE_READ_TOKEN }}
+
+  publish-sanitized-evidence:
+    needs:
+      - prepare
+      - validate
+    if: always() && needs.prepare.outputs.status == 'PASS'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Comment sanitized evidence ledger
+        uses: actions/github-script@v7
+        env:
+          REQUEST_ID: ${{ needs.prepare.outputs.requestId }}
+          VALIDATION_PROFILE: ${{ needs.prepare.outputs.validationProfile }}
+          PRIVATE_EXACT_SHA: ${{ needs.prepare.outputs.privateExactSha }}
+          EXPECTED_BASE_SHA: ${{ needs.prepare.outputs.expectedBaseSha }}
+          FINAL_VERDICT: ${{ needs.validate.outputs.verdict }}
+          FAILURE_STAGE: ${{ needs.validate.outputs.failureStage }}
+        with:
+          script: |
+            const safe = (value, fallback) => value && value.length > 0 ? value : fallback;
+            const body = [
+              '## PMAI exact-head validation evidence',
+              '',
+              `- Request ID: \`${safe(process.env.REQUEST_ID, 'UNKNOWN')}\``,
+              `- Validation profile: **${safe(process.env.VALIDATION_PROFILE, 'UNKNOWN')}**`,
+              `- Exact private SHA: \`${safe(process.env.PRIVATE_EXACT_SHA, 'UNKNOWN')}\``,
+              `- Exact expected base SHA: \`${safe(process.env.EXPECTED_BASE_SHA, 'UNKNOWN')}\``,
+              `- Public workflow run ID: \`${context.runId}\``,
+              `- Final verdict: **${safe(process.env.FINAL_VERDICT, 'FAIL')}**`,
+              `- Failure stage: **${safe(process.env.FAILURE_STAGE, 'VALIDATION_JOB_NOT_RUN')}**`,
+              '',
+              'No private source, changed-file names, raw output, artifact, secret, deployment, or database action is included in this evidence.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 5,
+              body,
+            });
