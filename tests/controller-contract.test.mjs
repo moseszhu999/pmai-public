@@ -22,6 +22,18 @@ test('accepts the fixed canonical exact-head input contract', () => {
   assert.equal(validateInputObject(validInput()).status, 'PASS');
 });
 
+test('accepts only the fixed six-file zero-migration platform MCP profile', () => {
+  assert.equal(validateInputObject(validInput({ validationProfile: 'platform-mcp-dev' })).status, 'PASS');
+  assert.equal(validateInputObject(validInput({
+    validationProfile: 'platform-mcp-dev',
+    expectedChangedFileCount: '5',
+  })).status, 'FAIL');
+  assert.equal(validateInputObject(validInput({
+    validationProfile: 'platform-mcp-dev',
+    expectedMigrationCount: '1',
+  })).status, 'FAIL');
+});
+
 test('rejects refs, short SHAs, uppercase SHAs and unknown profiles', () => {
   assert.equal(validateInputObject(validInput({ privateExactSha: 'main' })).status, 'FAIL');
   assert.equal(validateInputObject(validInput({ privateExactSha: validSha.slice(0, 12) })).status, 'FAIL');
@@ -53,12 +65,13 @@ test('controller keeps the private checkout read-only and public-safe', async ()
 test('dispatch exposes only fixed profiles and no arbitrary command input', async () => {
   const workflow = await readFile('.github/workflows/pmai-validation-dispatch.yml', 'utf8');
   assert.match(workflow, /canonical-baseline/);
+  assert.match(workflow, /platform-mcp-dev/);
   assert.doesNotMatch(workflow, /command:/);
   assert.doesNotMatch(workflow, /script:/);
   assert.doesNotMatch(workflow, /shellCommand/);
 });
 
-test('private profile seals raw output and scans Agent authority boundaries', async () => {
+test('private baseline profile seals raw output and scans Agent authority boundaries', async () => {
   const runner = await readFile('scripts/run-canonical-baseline.mjs', 'utf8');
   assert.match(runner, /pmai-private-raw/);
   assert.match(runner, /mode: 0o700/);
@@ -67,4 +80,17 @@ test('private profile seals raw output and scans Agent authority boundaries', as
   assert.match(runner, /DIRECT_SERVICE_ROLE_REFERENCE/);
   assert.match(runner, /RAW_EXECUTION_TOOL/);
   assert.match(runner, /FORMAL_EXECUTION_COMMAND/);
+});
+
+test('platform MCP profile is fixed-scope, sealed and preview-only', async () => {
+  const runner = await readFile('scripts/run-platform-mcp-dev-profile.mjs', 'utf8');
+  assert.match(runner, /pmai-private-raw/);
+  assert.match(runner, /platform-mcp-development-v1\.md/);
+  assert.match(runner, /deployment-evidence\.test\.ts/);
+  assert.match(runner, /setup-codex-platform-mcp\.sh/);
+  assert.match(runner, /link-pmai-netlify-dev\.sh/);
+  assert.match(runner, /https:\/\/mcp\.vercel\.com/);
+  assert.match(runner, /https:\/\/netlify-mcp\.netlify\.app\/mcp/);
+  assert.match(runner, /FORMAL_PLATFORM_ACTION_EXPOSED/);
+  assert.doesNotMatch(runner, /actions\/upload-artifact/);
 });
