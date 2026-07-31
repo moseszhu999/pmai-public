@@ -30,6 +30,9 @@ on:
       verdict:
         description: Sanitized exact-head verdict
         value: ${{ jobs.exact-head.outputs.verdict }}
+      failureStage:
+        description: Sanitized exact-head failure stage
+        value: ${{ jobs.exact-head.outputs.failureStage }}
 
 permissions:
   contents: read
@@ -40,6 +43,7 @@ jobs:
     timeout-minutes: 45
     outputs:
       verdict: ${{ steps.finalize.outputs.verdict }}
+      failureStage: ${{ steps.finalize.outputs.failure_stage }}
     steps:
       - name: Check out public CI controller
         uses: actions/checkout@v4
@@ -156,16 +160,26 @@ jobs:
         shell: bash
         run: |
           verdict=FAIL
-          if [[ "$PUBLIC_CONTRACTS_STATUS" == PASS \
-             && "$INPUT_STATUS" == PASS \
-             && "$CREDENTIAL_STATUS" == PASS \
-             && "$CHECKOUT_STATUS" == success \
-             && "$SCOPE_STATUS" == PASS \
-             && "$PROFILE_STATUS" == PASS ]]; then
+          failure_stage=UNKNOWN
+          if [[ "$PUBLIC_CONTRACTS_STATUS" != PASS ]]; then
+            failure_stage=PUBLIC_CONTROLLER_CONTRACTS
+          elif [[ "$INPUT_STATUS" != PASS ]]; then
+            failure_stage=INPUT_VALIDATION
+          elif [[ "$CREDENTIAL_STATUS" != PASS ]]; then
+            failure_stage=PRIVATE_READ_CREDENTIAL
+          elif [[ "$CHECKOUT_STATUS" != success ]]; then
+            failure_stage=PRIVATE_CHECKOUT
+          elif [[ "$SCOPE_STATUS" != PASS ]]; then
+            failure_stage=PRIVATE_SCOPE
+          elif [[ "$PROFILE_STATUS" != PASS ]]; then
+            failure_stage=VALIDATION_PROFILE
+          else
             verdict=PASS
+            failure_stage=NONE
           fi
           echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
-          echo "PMAI_PUBLIC_FINAL verdict=$verdict"
+          echo "failure_stage=$failure_stage" >> "$GITHUB_OUTPUT"
+          echo "PMAI_PUBLIC_FINAL verdict=$verdict failure_stage=$failure_stage"
 
       - name: Publish sanitized exact-head summary
         if: always()
@@ -193,6 +207,7 @@ jobs:
           LINT_STATUS: ${{ steps.profile.outputs.lint_status }}
           BUILD_STATUS: ${{ steps.profile.outputs.build_status }}
           FINAL_VERDICT: ${{ steps.finalize.outputs.verdict }}
+          FAILURE_STAGE: ${{ steps.finalize.outputs.failure_stage }}
         run: |
           node <<'NODE'
           const fs = require('node:fs');
@@ -219,6 +234,7 @@ jobs:
             `- Target lint: **${value(process.env.LINT_STATUS)}**`,
             `- Production build: **${value(process.env.BUILD_STATUS)}**`,
             `- Profile failure category: **${value(process.env.PROFILE_FAILURE)}**`,
+            `- Failure stage: **${value(process.env.FAILURE_STAGE)}**`,
             `- Final verdict: **${value(process.env.FINAL_VERDICT)}**`,
             '',
             'Raw private output remained runner-local and was deleted. No artifact, production deployment, database write, merge, or private-repository mutation was performed.',
