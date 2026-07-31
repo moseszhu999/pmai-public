@@ -1,0 +1,225 @@
+name: PMAI reusable exact-head controller
+
+on:
+  workflow_call:
+    inputs:
+      privateExactSha:
+        description: Lowercase 40-character private PMAI commit SHA
+        required: true
+        type: string
+      expectedBaseSha:
+        description: Exact merge-base SHA
+        required: true
+        type: string
+      expectedChangedFileCount:
+        description: Exact changed-file count from base to head
+        required: true
+        type: string
+      expectedMigrationCount:
+        description: Exact changed migration count
+        required: true
+        type: string
+      validationProfile:
+        description: Fixed public-safe validation profile
+        required: true
+        type: string
+    secrets:
+      PMAI_PRIVATE_READ_TOKEN:
+        required: false
+    outputs:
+      verdict:
+        description: Sanitized exact-head verdict
+        value: ${{ jobs.exact-head.outputs.verdict }}
+
+permissions:
+  contents: read
+
+jobs:
+  exact-head:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      verdict: ${{ steps.finalize.outputs.verdict }}
+    steps:
+      - name: Check out public CI controller
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate public controller contracts
+        id: public_contracts
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm test > "$RUNNER_TEMP/pmai-public-contracts.log" 2>&1
+          test_code=$?
+          npm run check >> "$RUNNER_TEMP/pmai-public-contracts.log" 2>&1
+          check_code=$?
+          if [[ "$test_code" == 0 && "$check_code" == 0 ]]; then
+            echo 'status=PASS' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo 'status=FAIL' >> "$GITHUB_OUTPUT"
+          exit 1
+
+      - name: Validate exact-head inputs
+        id: inputs
+        continue-on-error: true
+        env:
+          PRIVATE_EXACT_SHA: ${{ inputs.privateExactSha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expectedBaseSha }}
+          EXPECTED_CHANGED_FILE_COUNT: ${{ inputs.expectedChangedFileCount }}
+          EXPECTED_MIGRATION_COUNT: ${{ inputs.expectedMigrationCount }}
+          VALIDATION_PROFILE: ${{ inputs.validationProfile }}
+        run: node scripts/validate-inputs.mjs
+
+      - name: Validate read-only private credential presence
+        id: credential
+        if: steps.inputs.outputs.status == 'PASS' && steps.public_contracts.outputs.status == 'PASS'
+        shell: bash
+        env:
+          PRIVATE_TOKEN: ${{ secrets.PMAI_PRIVATE_READ_TOKEN }}
+        run: |
+          if [[ -n "$PRIVATE_TOKEN" ]]; then
+            echo 'status=PASS' >> "$GITHUB_OUTPUT"
+          else
+            echo 'status=FAIL' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out exact private PMAI commit
+        id: private_checkout
+        if: steps.inputs.outputs.status == 'PASS' && steps.credential.outputs.status == 'PASS'
+        uses: actions/checkout@v4
+        with:
+          repository: moseszhu999/pmai
+          ref: ${{ inputs.privateExactSha }}
+          token: ${{ secrets.PMAI_PRIVATE_READ_TOKEN }}
+          path: private-repo
+          persist-credentials: false
+          fetch-depth: 0
+          clean: true
+
+      - name: Verify exact head and private scope
+        id: scope
+        if: steps.private_checkout.outcome == 'success'
+        continue-on-error: true
+        env:
+          PRIVATE_REPO_PATH: ${{ github.workspace }}/private-repo
+          PRIVATE_EXACT_SHA: ${{ inputs.privateExactSha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expectedBaseSha }}
+          EXPECTED_CHANGED_FILE_COUNT: ${{ inputs.expectedChangedFileCount }}
+          EXPECTED_MIGRATION_COUNT: ${{ inputs.expectedMigrationCount }}
+        run: node scripts/verify-private-scope.mjs
+
+      - name: Run sealed canonical baseline profile
+        id: profile
+        if: steps.scope.outputs.status == 'PASS' && inputs.validationProfile == 'canonical-baseline'
+        continue-on-error: true
+        env:
+          PRIVATE_REPO_PATH: ${{ github.workspace }}/private-repo
+          PRIVATE_EXACT_SHA: ${{ inputs.privateExactSha }}
+        run: node scripts/run-canonical-baseline.mjs
+
+      - name: Finalize sanitized verdict
+        id: finalize
+        if: always()
+        env:
+          PUBLIC_CONTRACTS_STATUS: ${{ steps.public_contracts.outputs.status }}
+          INPUT_STATUS: ${{ steps.inputs.outputs.status }}
+          CREDENTIAL_STATUS: ${{ steps.credential.outputs.status }}
+          CHECKOUT_STATUS: ${{ steps.private_checkout.outcome }}
+          SCOPE_STATUS: ${{ steps.scope.outputs.status }}
+          PROFILE_STATUS: ${{ steps.profile.outputs.status }}
+        shell: bash
+        run: |
+          verdict=FAIL
+          if [[ "$PUBLIC_CONTRACTS_STATUS" == PASS \
+             && "$INPUT_STATUS" == PASS \
+             && "$CREDENTIAL_STATUS" == PASS \
+             && "$CHECKOUT_STATUS" == success \
+             && "$SCOPE_STATUS" == PASS \
+             && "$PROFILE_STATUS" == PASS ]]; then
+            verdict=PASS
+          fi
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+          echo "PMAI_PUBLIC_FINAL verdict=$verdict"
+
+      - name: Publish sanitized exact-head summary
+        if: always()
+        env:
+          VALIDATION_PROFILE: ${{ inputs.validationProfile }}
+          PRIVATE_EXACT_SHA: ${{ inputs.privateExactSha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expectedBaseSha }}
+          PUBLIC_CONTRACTS_STATUS: ${{ steps.public_contracts.outputs.status }}
+          INPUT_STATUS: ${{ steps.inputs.outputs.status }}
+          INPUT_FAILURE: ${{ steps.inputs.outputs.failure_category }}
+          CREDENTIAL_STATUS: ${{ steps.credential.outputs.status }}
+          CHECKOUT_STATUS: ${{ steps.private_checkout.outcome }}
+          SCOPE_STATUS: ${{ steps.scope.outputs.status }}
+          SCOPE_FAILURE: ${{ steps.scope.outputs.failure_category }}
+          ACTUAL_SHA: ${{ steps.scope.outputs.actual_sha }}
+          MERGE_BASE: ${{ steps.scope.outputs.merge_base }}
+          CHANGED_FILE_COUNT: ${{ steps.scope.outputs.changed_file_count }}
+          MIGRATION_COUNT: ${{ steps.scope.outputs.migration_count }}
+          PROFILE_STATUS: ${{ steps.profile.outputs.status }}
+          PROFILE_FAILURE: ${{ steps.profile.outputs.failure_category }}
+          CONTRACT_STATUS: ${{ steps.profile.outputs.contract_status }}
+          CONTRACT_VIOLATIONS: ${{ steps.profile.outputs.contract_violation_count }}
+          DEPENDENCY_STATUS: ${{ steps.profile.outputs.dependency_status }}
+          TEST_STATUS: ${{ steps.profile.outputs.test_status }}
+          LINT_STATUS: ${{ steps.profile.outputs.lint_status }}
+          BUILD_STATUS: ${{ steps.profile.outputs.build_status }}
+          FINAL_VERDICT: ${{ steps.finalize.outputs.verdict }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const value = (input) => input || 'NOT_RUN';
+          const lines = [
+            '## PMAI public exact-head CI',
+            '',
+            `- Validation profile: **${value(process.env.VALIDATION_PROFILE)}**`,
+            `- Exact private SHA: \`${process.env.ACTUAL_SHA || process.env.PRIVATE_EXACT_SHA}\``,
+            `- Exact merge base: \`${process.env.MERGE_BASE || process.env.EXPECTED_BASE_SHA}\``,
+            `- Public controller contracts: **${value(process.env.PUBLIC_CONTRACTS_STATUS)}**`,
+            `- Input validation: **${value(process.env.INPUT_STATUS)}**`,
+            `- Input failure category: **${value(process.env.INPUT_FAILURE)}**`,
+            `- Read-only credential: **${value(process.env.CREDENTIAL_STATUS)}**`,
+            `- Private checkout: **${value(process.env.CHECKOUT_STATUS)}**`,
+            `- Scope verification: **${value(process.env.SCOPE_STATUS)}**`,
+            `- Scope failure category: **${value(process.env.SCOPE_FAILURE)}**`,
+            `- Changed files: **${process.env.CHANGED_FILE_COUNT || '0'}**`,
+            `- Changed migrations: **${process.env.MIGRATION_COUNT || '0'}**`,
+            `- Boundary contracts: **${value(process.env.CONTRACT_STATUS)}**`,
+            `- Boundary violations: **${process.env.CONTRACT_VIOLATIONS || '0'}**`,
+            `- Dependency install: **${value(process.env.DEPENDENCY_STATUS)}**`,
+            `- Tests: **${value(process.env.TEST_STATUS)}**`,
+            `- Target lint: **${value(process.env.LINT_STATUS)}**`,
+            `- Production build: **${value(process.env.BUILD_STATUS)}**`,
+            `- Profile failure category: **${value(process.env.PROFILE_FAILURE)}**`,
+            `- Final verdict: **${value(process.env.FINAL_VERDICT)}**`,
+            '',
+            'Raw private output remained runner-local and was deleted. No artifact, deployment, database write, merge, or private-repository mutation was performed.',
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Delete private checkout and sealed raw output
+        if: always()
+        shell: bash
+        run: |
+          rm -rf private-repo \
+            "$RUNNER_TEMP/pmai-private-raw" \
+            "$RUNNER_TEMP/pmai-public-contracts.log"
+
+      - name: Enforce final verdict
+        if: always()
+        env:
+          FINAL_VERDICT: ${{ steps.finalize.outputs.verdict }}
+        run: test "$FINAL_VERDICT" = PASS

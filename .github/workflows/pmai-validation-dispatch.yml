@@ -1,0 +1,42 @@
+name: PMAI public validation dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      privateExactSha:
+        description: Lowercase 40-character private PMAI commit SHA
+        required: true
+        type: string
+      expectedBaseSha:
+        description: Exact merge-base SHA
+        required: true
+        type: string
+      expectedChangedFileCount:
+        description: Exact changed-file count
+        required: true
+        type: string
+      expectedMigrationCount:
+        description: Exact changed migration count
+        required: true
+        type: string
+      validationProfile:
+        description: Fixed validation profile
+        required: true
+        type: choice
+        options:
+          - canonical-baseline
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    uses: ./.github/workflows/pmai-exact-head-controller.yml
+    with:
+      privateExactSha: ${{ inputs.privateExactSha }}
+      expectedBaseSha: ${{ inputs.expectedBaseSha }}
+      expectedChangedFileCount: ${{ inputs.expectedChangedFileCount }}
+      expectedMigrationCount: ${{ inputs.expectedMigrationCount }}
+      validationProfile: ${{ inputs.validationProfile }}
+    secrets:
+      PMAI_PRIVATE_READ_TOKEN: ${{ secrets.PMAI_PRIVATE_READ_TOKEN }}

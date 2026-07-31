@@ -1,0 +1,10 @@
+{
+  "name": "pmai-public-ci",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check scripts/validate-inputs.mjs && node --check scripts/verify-private-scope.mjs && node --check scripts/run-canonical-baseline.mjs"
+  }
+}
