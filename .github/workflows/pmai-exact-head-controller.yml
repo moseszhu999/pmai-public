@@ -37,7 +37,7 @@ permissions:
 jobs:
   exact-head:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     outputs:
       verdict: ${{ steps.finalize.outputs.verdict }}
     steps:
@@ -118,14 +118,30 @@ jobs:
           EXPECTED_MIGRATION_COUNT: ${{ inputs.expectedMigrationCount }}
         run: node scripts/verify-private-scope.mjs
 
-      - name: Run sealed canonical baseline profile
+      - name: Run sealed selected validation profile
         id: profile
-        if: steps.scope.outputs.status == 'PASS' && inputs.validationProfile == 'canonical-baseline'
+        if: steps.scope.outputs.status == 'PASS'
         continue-on-error: true
+        shell: bash
         env:
           PRIVATE_REPO_PATH: ${{ github.workspace }}/private-repo
           PRIVATE_EXACT_SHA: ${{ inputs.privateExactSha }}
-        run: node scripts/run-canonical-baseline.mjs
+          EXPECTED_BASE_SHA: ${{ inputs.expectedBaseSha }}
+          VALIDATION_PROFILE: ${{ inputs.validationProfile }}
+        run: |
+          case "$VALIDATION_PROFILE" in
+            canonical-baseline)
+              node scripts/run-canonical-baseline.mjs
+              ;;
+            platform-mcp-dev)
+              node scripts/run-platform-mcp-dev-profile.mjs
+              ;;
+            *)
+              echo 'status=FAIL' >> "$GITHUB_OUTPUT"
+              echo 'failure_category=VALIDATION_PROFILE_INVALID' >> "$GITHUB_OUTPUT"
+              exit 1
+              ;;
+          esac
 
       - name: Finalize sanitized verdict
         id: finalize
@@ -205,7 +221,7 @@ jobs:
             `- Profile failure category: **${value(process.env.PROFILE_FAILURE)}**`,
             `- Final verdict: **${value(process.env.FINAL_VERDICT)}**`,
             '',
-            'Raw private output remained runner-local and was deleted. No artifact, deployment, database write, merge, or private-repository mutation was performed.',
+            'Raw private output remained runner-local and was deleted. No artifact, production deployment, database write, merge, or private-repository mutation was performed.',
           ];
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
           NODE
