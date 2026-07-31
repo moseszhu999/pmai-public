@@ -6,6 +6,7 @@ const COUNT_PATTERN = /^(0|[1-9][0-9]*)$/;
 export const VALIDATION_PROFILES = Object.freeze([
   'canonical-baseline',
   'platform-mcp-dev',
+  'mcp-gateway-readonly',
 ]);
 
 export function validateInputObject(input) {
@@ -25,6 +26,11 @@ export function validateInputObject(input) {
   if (validationProfile === 'platform-mcp-dev') {
     if (expectedChangedFileCount !== '6') failures.push('PLATFORM_MCP_CHANGED_FILE_COUNT_INVALID');
     if (expectedMigrationCount !== '0') failures.push('PLATFORM_MCP_MIGRATION_COUNT_INVALID');
+  }
+
+  if (validationProfile === 'mcp-gateway-readonly') {
+    if (expectedChangedFileCount !== '9') failures.push('MCP_GATEWAY_CHANGED_FILE_COUNT_INVALID');
+    if (expectedMigrationCount !== '0') failures.push('MCP_GATEWAY_MIGRATION_COUNT_INVALID');
   }
 
   return Object.freeze({
