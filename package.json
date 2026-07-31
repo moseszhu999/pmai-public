@@ -5,6 +5,6 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check scripts/validate-inputs.mjs && node --check scripts/verify-private-scope.mjs && node --check scripts/run-canonical-baseline.mjs && node --check scripts/run-platform-mcp-dev-profile.mjs"
+    "check": "node --check scripts/validate-inputs.mjs && node --check scripts/verify-private-scope.mjs && node --check scripts/run-canonical-baseline.mjs && node --check scripts/run-platform-mcp-dev-profile.mjs && node --check scripts/read-validation-request.mjs"
   }
 }
