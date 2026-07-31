@@ -1,4 +1,4 @@
-import { appendFileSync, closeSync, existsSync, openSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -54,6 +54,29 @@ const expectedFiles = Object.freeze([
   'lib/pmai-agent-gateway/mcp-server.ts',
   'tests/pmai-mcp-gateway.test.ts',
 ]);
+
+function sanitizeTypecheckDiagnostics() {
+  const rawPath = path.join(rawDir, 'typecheck.raw');
+  if (!existsSync(rawPath)) return [];
+  const raw = readFileSync(rawPath, 'utf8');
+  const diagnostics = [];
+  const pattern = /(?:^|\n)([^\r\n()]+\.[cm]?[tj]sx?)\((\d+),(\d+)\): error TS(\d+):/g;
+  for (const match of raw.matchAll(pattern)) {
+    const reportedPath = match[1].trim().replaceAll('\\', '/');
+    const absolutePath = path.isAbsolute(reportedPath)
+      ? path.normalize(reportedPath)
+      : path.resolve(repo, reportedPath);
+    const relativePath = path.relative(repo, absolutePath).replaceAll('\\', '/');
+    diagnostics.push({
+      file: relativePath.startsWith('../') ? 'OUTSIDE_REPOSITORY' : relativePath,
+      line: Number(match[2]),
+      column: Number(match[3]),
+      code: `TS${match[4]}`,
+    });
+    if (diagnostics.length >= 20) break;
+  }
+  return diagnostics;
+}
 
 async function runContractChecks() {
   const violations = [];
@@ -138,8 +161,9 @@ const lintStatus = dependencyStatus === 'PASS'
     ])
   : 'NOT_RUN';
 const typecheckStatus = dependencyStatus === 'PASS'
-  ? runStage('typecheck', 'npx', ['tsc', '--noEmit', '--incremental', 'false'])
+  ? runStage('typecheck', 'npx', ['tsc', '--noEmit', '--incremental', 'false', '--pretty', 'false'])
   : 'NOT_RUN';
+const typecheckDiagnostics = typecheckStatus === 'FAIL' ? sanitizeTypecheckDiagnostics() : [];
 const buildStatus = dependencyStatus === 'PASS'
   ? runStage('production-build', 'npm', ['run', 'build'])
   : 'NOT_RUN';
@@ -168,6 +192,10 @@ appendOutput('dependency_status', dependencyStatus);
 appendOutput('test_status', testStatus);
 appendOutput('lint_status', lintStatus);
 appendOutput('typecheck_status', typecheckStatus);
+appendOutput('typecheck_diagnostic_count', String(typecheckDiagnostics.length));
 appendOutput('build_status', buildStatus);
+if (typecheckDiagnostics.length > 0) {
+  console.log(`PMAI_TYPECHECK_DIAGNOSTICS ${JSON.stringify(typecheckDiagnostics)}`);
+}
 console.log(`PMAI_MCP_GATEWAY_READONLY status=${overall} category=${failureCategory}`);
 process.exitCode = overall === 'PASS' ? 0 : 1;
