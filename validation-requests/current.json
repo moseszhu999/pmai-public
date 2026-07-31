@@ -1,8 +1,8 @@
 {
-  "requestId": "pmai-pr25-mcp-gateway-readonly-v2",
-  "privateExactSha": "2ac4ad12ae60e7c4e94657a3d5772a7d27428a9c",
+  "requestId": "pmai-main-canonical-baseline-v1",
+  "privateExactSha": "4625a8ba8f842cfec5377a6de7fe246a1f2e9602",
   "expectedBaseSha": "4625a8ba8f842cfec5377a6de7fe246a1f2e9602",
-  "expectedChangedFileCount": "9",
+  "expectedChangedFileCount": "0",
   "expectedMigrationCount": "0",
-  "validationProfile": "mcp-gateway-readonly"
+  "validationProfile": "canonical-baseline"
 }
