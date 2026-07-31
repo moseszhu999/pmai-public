@@ -3,7 +3,10 @@ import { pathToFileURL } from 'node:url';
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const COUNT_PATTERN = /^(0|[1-9][0-9]*)$/;
-export const VALIDATION_PROFILES = Object.freeze(['canonical-baseline']);
+export const VALIDATION_PROFILES = Object.freeze([
+  'canonical-baseline',
+  'platform-mcp-dev',
+]);
 
 export function validateInputObject(input) {
   const privateExactSha = String(input.privateExactSha ?? '').trim();
@@ -18,6 +21,11 @@ export function validateInputObject(input) {
   if (!VALIDATION_PROFILES.includes(validationProfile)) failures.push('VALIDATION_PROFILE_INVALID');
   if (!COUNT_PATTERN.test(expectedChangedFileCount)) failures.push('EXPECTED_CHANGED_FILE_COUNT_INVALID');
   if (!COUNT_PATTERN.test(expectedMigrationCount)) failures.push('EXPECTED_MIGRATION_COUNT_INVALID');
+
+  if (validationProfile === 'platform-mcp-dev') {
+    if (expectedChangedFileCount !== '6') failures.push('PLATFORM_MCP_CHANGED_FILE_COUNT_INVALID');
+    if (expectedMigrationCount !== '0') failures.push('PLATFORM_MCP_MIGRATION_COUNT_INVALID');
+  }
 
   return Object.freeze({
     status: failures.length === 0 ? 'PASS' : 'FAIL',

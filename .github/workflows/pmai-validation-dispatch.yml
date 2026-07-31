@@ -25,6 +25,7 @@ on:
         type: choice
         options:
           - canonical-baseline
+          - platform-mcp-dev
 
 permissions:
   contents: read
