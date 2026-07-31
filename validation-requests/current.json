@@ -1,8 +1,8 @@
 {
-  "requestId": "pmai-pr24-netlify-only-v4",
-  "privateExactSha": "2091b50a4369e79bbbe6eb99eb8980413877181a",
-  "expectedBaseSha": "7423edd3525ef2172729db8f0c0150faf8984d5c",
-  "expectedChangedFileCount": "6",
+  "requestId": "pmai-pr25-mcp-gateway-readonly-v1",
+  "privateExactSha": "2ac4ad12ae60e7c4e94657a3d5772a7d27428a9c",
+  "expectedBaseSha": "4625a8ba8f842cfec5377a6de7fe246a1f2e9602",
+  "expectedChangedFileCount": "9",
   "expectedMigrationCount": "0",
-  "validationProfile": "platform-mcp-dev"
+  "validationProfile": "mcp-gateway-readonly"
 }
