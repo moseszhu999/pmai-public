@@ -27,6 +27,7 @@ on:
           - canonical-baseline
           - platform-mcp-dev
           - mcp-gateway-readonly
+          - operations-workspace
 
 permissions:
   contents: read
