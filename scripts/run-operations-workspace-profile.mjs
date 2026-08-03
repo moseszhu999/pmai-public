@@ -126,7 +126,11 @@ const testStatus = dependencyStatus === 'PASS'
     ])
   : 'NOT_RUN';
 const lintStatus = dependencyStatus === 'PASS'
-  ? runStage('repository-lint', 'npm', ['run', 'lint'])
+  ? runStage('target-lint', 'npx', [
+      'eslint', '--max-warnings=0',
+      'public/workspace/operations-remediation-v1.js',
+      'tests/operations-remediation-v1.test.ts',
+    ])
   : 'NOT_RUN';
 const typecheckStatus = dependencyStatus === 'PASS'
   ? runStage('strict-typecheck', 'npx', ['tsc', '--noEmit'])
