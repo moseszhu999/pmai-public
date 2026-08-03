@@ -1,8 +1,8 @@
 {
-  "requestId": "pmai-pr27-netlify-only-v2",
-  "privateExactSha": "8123c25718dc0a5b1ce55ca1b8a336e2b3d9ee78",
-  "expectedBaseSha": "245a5b51ce7fc74fa9955c247e549c9d57b016ec",
-  "expectedChangedFileCount": "6",
+  "requestId": "pmai-pr41-operations-workspace-v1",
+  "privateExactSha": "f823868e455f0b1018252ca8b4f85d65bc0a26d1",
+  "expectedBaseSha": "39a15de16c8d275e567b3ab435596ffbf8d8a251",
+  "expectedChangedFileCount": "4",
   "expectedMigrationCount": "0",
-  "validationProfile": "platform-mcp-dev"
+  "validationProfile": "operations-workspace"
 }
