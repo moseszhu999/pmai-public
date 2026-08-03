@@ -7,6 +7,7 @@ export const VALIDATION_PROFILES = Object.freeze([
   'canonical-baseline',
   'platform-mcp-dev',
   'mcp-gateway-readonly',
+  'operations-workspace',
 ]);
 
 export function validateInputObject(input) {
@@ -31,6 +32,11 @@ export function validateInputObject(input) {
   if (validationProfile === 'mcp-gateway-readonly') {
     if (expectedChangedFileCount !== '9') failures.push('MCP_GATEWAY_CHANGED_FILE_COUNT_INVALID');
     if (expectedMigrationCount !== '0') failures.push('MCP_GATEWAY_MIGRATION_COUNT_INVALID');
+  }
+
+  if (validationProfile === 'operations-workspace') {
+    if (expectedChangedFileCount !== '4') failures.push('OPERATIONS_WORKSPACE_CHANGED_FILE_COUNT_INVALID');
+    if (expectedMigrationCount !== '0') failures.push('OPERATIONS_WORKSPACE_MIGRATION_COUNT_INVALID');
   }
 
   return Object.freeze({

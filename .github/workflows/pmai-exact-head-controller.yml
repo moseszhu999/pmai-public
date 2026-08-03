@@ -143,6 +143,9 @@ jobs:
             mcp-gateway-readonly)
               node scripts/run-mcp-gateway-readonly-profile.mjs
               ;;
+            operations-workspace)
+              node scripts/run-operations-workspace-profile.mjs
+              ;;
             *)
               echo 'status=FAIL' >> "$GITHUB_OUTPUT"
               echo 'failure_category=VALIDATION_PROFILE_INVALID' >> "$GITHUB_OUTPUT"
