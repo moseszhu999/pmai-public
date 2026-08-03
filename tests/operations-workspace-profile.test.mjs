@@ -35,6 +35,15 @@ test('operations workspace profile preserves truth and execution boundaries', ()
   assert.match(profile, /production-build/);
 });
 
+test('operations workspace lint is fixed to the owned JavaScript and TypeScript files', () => {
+  assert.match(profile, /runStage\('target-lint', 'npx'/);
+  assert.match(profile, /'eslint', '--max-warnings=0'/);
+  assert.match(profile, /'public\/workspace\/operations-remediation-v1\.js'/);
+  assert.match(profile, /'tests\/operations-remediation-v1\.test\.ts'/);
+  assert.doesNotMatch(profile, /runStage\('repository-lint'/);
+  assert.doesNotMatch(profile, /\['run', 'lint'\]/);
+});
+
 test('operations workspace is routed by the reusable public controller', () => {
   assert.match(workflow, /operations-workspace\)/);
   assert.match(workflow, /run-operations-workspace-profile\.mjs/);
